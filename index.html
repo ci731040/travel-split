@@ -1,3 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旅遊分帳小幫手</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-12">
+
+  <header class="bg-indigo-600 text-white shadow-md">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold flex items-center gap-2">
+        ✈️ 旅遊分帳小幫手
+      </h1>
+      <button onclick="createNewTrip()" class="bg-indigo-500 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition">
+        + 新建旅行
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 mt-6">
+    <div id="tripTabs" class="flex gap-2 overflow-x-auto pb-2 border-b border-slate-200 mb-6">
+      </div>
+
+    <div id="appContent" class="space-y-6">
+      
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <div>
+            <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">目前旅行</span>
+            <h2 id="currentTripName" class="text-2xl font-bold text-slate-800"></h2>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="copyShareLink()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded transition flex items-center gap-1">
+              🔗 複製分享連結
+            </button>
+            <button onclick="exportData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition">匯出 JSON</button>
+            <button onclick="deleteCurrentTrip()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded transition">刪除此旅行</button>
+          </div>
+        </div>
+
+        <div class="border-t pt-4">
+          <label class="block text-sm font-medium text-slate-600 mb-2">同行成員（名單）：</label>
+          <div id="memberTags" class="flex flex-wrap gap-2 mb-3">
+            </div>
+          <div class="flex gap-2 max-w-sm">
+            <input type="text" id="newMemberName" placeholder="輸入成員名稱" class="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <button onclick="addMember()" class="bg-slate-800 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-slate-700 transition">新增成員</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+          <p class="text-xs text-slate-500">總支出金額</p>
+          <p id="totalExpense" class="text-2xl font-bold text-indigo-600">NT$ 0</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+          <p class="text-xs text-slate-500">人均消費估算</p>
+          <p id="perPersonExpense" class="text-2xl font-bold text-emerald-600">NT$ 0</p>
+        </div>
+      </div>
+
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+        <h3 class="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">
+          📝 記一筆款項
+        </h3>
+        <form id="expenseForm" onsubmit="handleExpenseSubmit(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">墊付項目名稱</label>
+              <input type="text" id="itemName" required placeholder="例如：晚餐、計程車" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">墊付金額 ($)</label>
+              <input type="number" id="itemAmount" required min="1" placeholder="例如：1200" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">先墊付者</label>
+              <select id="payerSelect" required class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                </select>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="block text-xs font-medium text-slate-600">幫哪些人墊付（平攤人）</label>
+              <button type="button" onclick="toggleSelectAllBeneficiaries()" class="text-xs text-indigo-600 hover:underline">全選 / 全不選</button>
+            </div>
+            <div id="beneficiariesCheckboxes" class="flex flex-wrap gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              </div>
+          </div>
+
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition text-sm">
+            新增這筆費用
+          </button>
+        </form>
+      </section>
+
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+        <h3 class="font-bold text-lg mb-4 text-slate-800">📋 花費明細</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 uppercase text-xs">
+              <tr>
+                <th class="py-3 px-3">項目</th>
+                <th class="py-3 px-3">金額</th>
+                <th class="py-3 px-3">墊付者</th>
+                <th class="py-3 px-3">分攤人</th>
+                <th class="py-3 px-3 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="expenseTableBody" class="divide-y divide-slate-100">
+              </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bg-gradient-to-br from-indigo-50 to-slate-50 p-5 rounded-xl border border-indigo-100 shadow-sm">
+        <h3 class="font-bold text-lg mb-2 text-indigo-950 flex items-center gap-2">
+          💡 最終結算方案（最佳化轉帳）
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">系統已自動計算淨額，並透過演算法簡化轉帳流程以減少次數。</p>
+        
+        <div id="settlementResult" class="space-y-2">
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    // 預設範例資料
+    const defaultTrips = [
+      {
+        id: 'trip_default',
+        name: '東京 5 天 4 夜自由行',
+        members: ['小明', '小美', '阿豪'],
+        expenses: [
+          { id: 'exp_1', name: '成田機場快線車票', amount: 3000, payer: '小明', beneficiaries: ['小明', '小美', '阿豪'] },
+          { id: 'exp_2', name: '居酒屋晚餐', amount: 4500, payer: '小美', beneficiaries: ['小明', '小美', '阿豪'] }
+        ]
+      }
+    ];
+
+    let trips = [];
+    let currentTripId = '';
+
+    // 初始化：優先從 URL 解析資料，次之從 localStorage 讀取
 function initData() {
   const hash = window.location.hash;
   
@@ -31,3 +181,265 @@ function initData() {
     loadFromLocal();
   }
 }
+
+    function loadFromLocal() {
+      trips = JSON.parse(localStorage.getItem('travel_split_trips')) || defaultTrips;
+      const hashId = window.location.hash.replace('#', '');
+      currentTripId = trips.find(t => t.id === hashId) ? hashId : trips[0].id;
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem('travel_split_trips', JSON.stringify(trips));
+      updateUrlHash();
+    }
+
+    // 將當前行程資料編碼成 Base64 放入網址 Hash
+    function updateUrlHash() {
+      const currentTrip = getCurrentTrip();
+      if (currentTrip) {
+        const jsonStr = JSON.stringify(currentTrip);
+        const encoded = btoa(encodeURIComponent(jsonStr));
+        window.history.replaceState(null, '', `#data=${encoded}`);
+      }
+    }
+
+    function getCurrentTrip() {
+      return trips.find(t => t.id === currentTripId) || trips[0];
+    }
+
+    // 複製分享連結給朋友
+    function copyShareLink() {
+      updateUrlHash();
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('🎉 分享連結已複製到剪貼簿！傳給朋友開啟即可載入此行程資料。');
+      }).catch(() => {
+        alert('複製失敗，請手動複製網址列的所有文字。');
+      });
+    }
+
+    function render() {
+      const currentTrip = getCurrentTrip();
+      if (!currentTrip) return;
+
+      currentTripId = currentTrip.id;
+
+      renderTabs();
+      renderTripDetails();
+      renderExpenseTable();
+      renderSettlement();
+      updateUrlHash();
+    }
+
+    function renderTabs() {
+      const tabsContainer = document.getElementById('tripTabs');
+      tabsContainer.innerHTML = trips.map(trip => `
+        <button onclick="switchTrip('${trip.id}')" class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${trip.id === currentTripId ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-600 hover:bg-slate-100'}">
+          ${trip.name}
+        </button>
+      `).join('');
+    }
+
+    function switchTrip(id) {
+      currentTripId = id;
+      render();
+    }
+
+    function createNewTrip() {
+      const name = prompt('請輸入新旅行的名稱：', '新旅行');
+      if (!name) return;
+      const newTrip = {
+        id: 'trip_' + Date.now(),
+        name: name,
+        members: ['成員A', '成員B'],
+        expenses: []
+      };
+      trips.unshift(newTrip);
+      currentTripId = newTrip.id;
+      saveToLocalStorage();
+      render();
+    }
+
+    function deleteCurrentTrip() {
+      if (trips.length <= 1) {
+        alert('請至少保留一個旅行記錄！');
+        return;
+      }
+      if (confirm(`確定要刪除「${getCurrentTrip().name}」嗎？`)) {
+        trips = trips.filter(t => t.id !== currentTripId);
+        currentTripId = trips[0].id;
+        saveToLocalStorage();
+        render();
+      }
+    }
+
+    function renderTripDetails() {
+      const trip = getCurrentTrip();
+      document.getElementById('currentTripName').innerText = trip.name;
+
+      const memberContainer = document.getElementById('memberTags');
+      memberContainer.innerHTML = trip.members.map(m => `
+        <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-full border border-slate-200">
+          ${m}
+          <button onclick="removeMember('${m}')" class="text-slate-400 hover:text-rose-500 font-bold ml-1">&times;</button>
+        </span>
+      `).join('');
+
+      const payerSelect = document.getElementById('payerSelect');
+      payerSelect.innerHTML = trip.members.map(m => `<option value="${m}">${m}</option>`).join('');
+
+      const beneContainer = document.getElementById('beneficiariesCheckboxes');
+      beneContainer.innerHTML = trip.members.map(m => `
+        <label class="inline-flex items-center gap-1.5 text-sm font-medium cursor-pointer">
+          <input type="checkbox" name="beneficiary" value="${m}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+          ${m}
+        </label>
+      `).join('');
+
+      const total = trip.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      document.getElementById('totalExpense').innerText = `NT$ ${total.toLocaleString()}`;
+      
+      const perPerson = trip.members.length ? Math.round(total / trip.members.length) : 0;
+      document.getElementById('perPersonExpense').innerText = `NT$ ${perPerson.toLocaleString()}`;
+    }
+
+    function addMember() {
+      const input = document.getElementById('newMemberName');
+      const name = input.value.trim();
+      const trip = getCurrentTrip();
+
+      if (!name) return;
+      if (trip.members.includes(name)) {
+        alert('該名字已經存在！');
+        return;
+      }
+
+      trip.members.push(name);
+      input.value = '';
+      saveToLocalStorage();
+      render();
+    }
+
+    function removeMember(name) {
+      const trip = getCurrentTrip();
+      const hasExpense = trip.expenses.some(e => e.payer === name || e.beneficiaries.includes(name));
+      if (hasExpense) {
+        if (!confirm(`成員「${name}」已有相關的花費紀錄，刪除可能導致結算不準確。確定刪除？`)) return;
+      }
+      trip.members = trip.members.filter(m => m !== name);
+      saveToLocalStorage();
+      render();
+    }
+
+    function toggleSelectAllBeneficiaries() {
+      const checkboxes = document.querySelectorAll('input[name="beneficiary"]');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => cb.checked = !allChecked);
+    }
+
+    function handleExpenseSubmit(e) {
+      e.preventDefault();
+      const trip = getCurrentTrip();
+      const name = document.getElementById('itemName').value;
+      const amount = Number(document.getElementById('itemAmount').value);
+      const payer = document.getElementById('payerSelect').value;
+      
+      const checkedBoxes = document.querySelectorAll('input[name="beneficiary"]:checked');
+      const beneficiaries = Array.from(checkedBoxes).map(cb => cb.value);
+
+      if (beneficiaries.length === 0) {
+        alert('請至少勾選一個幫忙墊付的人！');
+        return;
+      }
+
+      trip.expenses.push({
+        id: 'exp_' + Date.now(),
+        name,
+        amount,
+        payer,
+        beneficiaries
+      });
+
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemAmount').value = '';
+      
+      saveToLocalStorage();
+      render();
+    }
+
+    function deleteExpense(expId) {
+      const trip = getCurrentTrip();
+      trip.expenses = trip.expenses.filter(e => e.id !== expId);
+      saveToLocalStorage();
+      render();
+    }
+
+    function renderExpenseTable() {
+      const trip = getCurrentTrip();
+      const tbody = document.getElementById('expenseTableBody');
+
+      if (trip.expenses.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">目前尚無消費紀錄</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = trip.expenses.map(exp => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-3 px-3 font-medium text-slate-800">${exp.name}</td>
+          <td class="py-3 px-3 font-bold text-indigo-600">NT$ ${exp.amount.toLocaleString()}</td>
+          <td class="py-3 px-3"><span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs">${exp.payer}</span></td>
+          <td class="py-3 px-3 text-xs text-slate-500">${exp.beneficiaries.join(', ')}</td>
+          <td class="py-3 px-3 text-right">
+            <button onclick="deleteExpense('${exp.id}')" class="text-rose-500 hover:text-rose-700 text-xs font-medium">刪除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderSettlement() {
+      const trip = getCurrentTrip();
+      const container = document.getElementById('settlementResult');
+      
+      if (trip.members.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 text-sm">請先建立成員。</p>`;
+        return;
+      }
+
+      const balances = {};
+      trip.members.forEach(m => balances[m] = 0);
+
+      trip.expenses.forEach(exp => {
+        const splitAmount = exp.amount / exp.beneficiaries.length;
+        balances[exp.payer] = (balances[exp.payer] || 0) + exp.amount;
+        exp.beneficiaries.forEach(b => {
+          balances[b] = (balances[b] || 0) - splitAmount;
+        });
+      });
+
+      let debtors = [];
+      let creditors = [];
+
+      Object.keys(balances).forEach(member => {
+        const amount = Math.round(balances[member]);
+        if (amount < -1) debtors.push({ name: member, amount: -amount });
+        else if (amount > 1) creditors.push({ name: member, amount: amount });
+      });
+
+      let transactions = [];
+      let i = 0, j = 0;
+
+      while (i < debtors.length && j < creditors.length) {
+        let debtor = debtors[i];
+        let creditor = creditors[j];
+        
+        let payment = Math.min(debtor.amount, creditor.amount);
+        transactions.push({ from: debtor.name, to: creditor.name, amount: payment });
+
+        debtor.amount -= payment;
+        creditor.amount -= payment;
+
+        if (debtor.amount <= 1) i++;
+        if (creditor.amount <= 1) j++;
+      }
+
+      if (transactions.length === 0) {
+        container.innerHTML = `<p class="text-emerald-600 font-medium text-sm">🎉 太
