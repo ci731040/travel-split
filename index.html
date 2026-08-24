@@ -31,7 +31,10 @@
             <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">目前旅行</span>
             <h2 id="currentTripName" class="text-2xl font-bold text-slate-800"></h2>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
+            <button onclick="copyShareLink()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded transition flex items-center gap-1">
+              🔗 複製分享連結
+            </button>
             <button onclick="exportData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition">匯出 JSON</button>
             <button onclick="deleteCurrentTrip()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded transition">刪除此旅行</button>
           </div>
@@ -128,10 +131,10 @@
   </main>
 
   <script>
-    // 預設資料結構
-    let trips = JSON.parse(localStorage.getItem('travel_split_trips')) || [
+    // 預設範例資料
+    const defaultTrips = [
       {
-        id: 'trip_' + Date.now(),
+        id: 'trip_default',
         name: '東京 5 天 4 夜自由行',
         members: ['小明', '小美', '阿豪'],
         expenses: [
@@ -141,33 +144,87 @@
       }
     ];
 
-    let currentTripId = getTripIdFromHash() || trips[0]?.id;
+    let trips = [];
+    let currentTripId = '';
+
+    // 初始化：優先從 URL 解析資料，次之從 localStorage 讀取
+    function initData() {
+      const hash = window.location.hash;
+      
+      // 1. 若網址包含數據編碼
+      if (hash.startsWith('#data=')) {
+        try {
+          const jsonStr = decodeURIComponent(atob(hash.replace('#data=', '')));
+          const sharedTrip = JSON.parse(jsonStr);
+          
+          let localTrips = JSON.parse(localStorage.getItem('travel_split_trips')) || defaultTrips;
+          
+          // 檢查本機是否已有該行程，有則更新，無則新增
+          const index = localTrips.findIndex(t => t.id === sharedTrip.id);
+          if (index !== -1) {
+            localTrips[index] = sharedTrip;
+          } else {
+            localTrips.unshift(sharedTrip);
+          }
+          
+          trips = localTrips;
+          currentTripId = sharedTrip.id;
+          saveToLocalStorage();
+        } catch (e) {
+          console.error('解析網址失敗：', e);
+          loadFromLocal();
+        }
+      } else {
+        loadFromLocal();
+      }
+    }
+
+    function loadFromLocal() {
+      trips = JSON.parse(localStorage.getItem('travel_split_trips')) || defaultTrips;
+      const hashId = window.location.hash.replace('#', '');
+      currentTripId = trips.find(t => t.id === hashId) ? hashId : trips[0].id;
+    }
 
     function saveToLocalStorage() {
       localStorage.setItem('travel_split_trips', JSON.stringify(trips));
+      updateUrlHash();
     }
 
-    function getTripIdFromHash() {
-      const hash = window.location.hash.replace('#', '');
-      return trips.find(t => t.id === hash) ? hash : null;
+    // 將當前行程資料編碼成 Base64 放入網址 Hash
+    function updateUrlHash() {
+      const currentTrip = getCurrentTrip();
+      if (currentTrip) {
+        const jsonStr = JSON.stringify(currentTrip);
+        const encoded = btoa(encodeURIComponent(jsonStr));
+        window.history.replaceState(null, '', `#data=${encoded}`);
+      }
     }
 
     function getCurrentTrip() {
       return trips.find(t => t.id === currentTripId) || trips[0];
     }
 
-    // 初始化與渲染
+    // 複製分享連結給朋友
+    function copyShareLink() {
+      updateUrlHash();
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('🎉 分享連結已複製到剪貼簿！傳給朋友開啟即可載入此行程資料。');
+      }).catch(() => {
+        alert('複製失敗，請手動複製網址列的所有文字。');
+      });
+    }
+
     function render() {
       const currentTrip = getCurrentTrip();
       if (!currentTrip) return;
 
       currentTripId = currentTrip.id;
-      window.location.hash = currentTripId;
 
       renderTabs();
       renderTripDetails();
       renderExpenseTable();
       renderSettlement();
+      updateUrlHash();
     }
 
     function renderTabs() {
@@ -193,7 +250,7 @@
         members: ['成員A', '成員B'],
         expenses: []
       };
-      trips.unshift(newTrip); // 將最新的旅行放在最前面
+      trips.unshift(newTrip);
       currentTripId = newTrip.id;
       saveToLocalStorage();
       render();
@@ -204,7 +261,7 @@
         alert('請至少保留一個旅行記錄！');
         return;
       }
-      if (confirm(`確定要刪除「${getCurrentTrip().name}」嗎？資料將無法恢復。`)) {
+      if (confirm(`確定要刪除「${getCurrentTrip().name}」嗎？`)) {
         trips = trips.filter(t => t.id !== currentTripId);
         currentTripId = trips[0].id;
         saveToLocalStorage();
@@ -216,7 +273,6 @@
       const trip = getCurrentTrip();
       document.getElementById('currentTripName').innerText = trip.name;
 
-      // 渲染成員標籤
       const memberContainer = document.getElementById('memberTags');
       memberContainer.innerHTML = trip.members.map(m => `
         <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-full border border-slate-200">
@@ -225,7 +281,6 @@
         </span>
       `).join('');
 
-      // 渲染下拉選單與 Checkbox
       const payerSelect = document.getElementById('payerSelect');
       payerSelect.innerHTML = trip.members.map(m => `<option value="${m}">${m}</option>`).join('');
 
@@ -237,7 +292,6 @@
         </label>
       `).join('');
 
-      // 計算統計
       const total = trip.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
       document.getElementById('totalExpense').innerText = `NT$ ${total.toLocaleString()}`;
       
@@ -252,7 +306,7 @@
 
       if (!name) return;
       if (trip.members.includes(name)) {
-        alert('該名字已經存在於成員列表中！');
+        alert('該名字已經存在！');
         return;
       }
 
@@ -264,7 +318,6 @@
 
     function removeMember(name) {
       const trip = getCurrentTrip();
-      // 檢查是否有費用關聯
       const hasExpense = trip.expenses.some(e => e.payer === name || e.beneficiaries.includes(name));
       if (hasExpense) {
         if (!confirm(`成員「${name}」已有相關的花費紀錄，刪除可能導致結算不準確。確定刪除？`)) return;
@@ -291,7 +344,7 @@
       const beneficiaries = Array.from(checkedBoxes).map(cb => cb.value);
 
       if (beneficiaries.length === 0) {
-        alert('請至少勾選一個幫忙墊付的人（分攤人）！');
+        alert('請至少勾選一個幫忙墊付的人！');
         return;
       }
 
@@ -303,7 +356,6 @@
         beneficiaries
       });
 
-      // 清空輸入
       document.getElementById('itemName').value = '';
       document.getElementById('itemAmount').value = '';
       
@@ -340,7 +392,6 @@
       `).join('');
     }
 
-    // 核心演算法：計算淨額與最小化轉帳次數
     function renderSettlement() {
       const trip = getCurrentTrip();
       const container = document.getElementById('settlementResult');
@@ -350,34 +401,26 @@
         return;
       }
 
-      // 1. 計算每個人應付/應收的淨額
       const balances = {};
       trip.members.forEach(m => balances[m] = 0);
 
       trip.expenses.forEach(exp => {
         const splitAmount = exp.amount / exp.beneficiaries.length;
-        // 墊付者先得到正數 (應收)
         balances[exp.payer] = (balances[exp.payer] || 0) + exp.amount;
-        // 應分攤的人扣除 (應付)
         exp.beneficiaries.forEach(b => {
           balances[b] = (balances[b] || 0) - splitAmount;
         });
       });
 
-      // 2. 分離出債務人與債權人
-      let debtors = [];   // 需要給錢的人 (淨額 < 0)
-      let creditors = []; // 應拿錢的人 (淨額 > 0)
+      let debtors = [];
+      let creditors = [];
 
       Object.keys(balances).forEach(member => {
         const amount = Math.round(balances[member]);
-        if (amount < -1) {
-          debtors.push({ name: member, amount: -amount });
-        } else if (amount > 1) {
-          creditors.push({ name: member, amount: amount });
-        }
+        if (amount < -1) debtors.push({ name: member, amount: -amount });
+        else if (amount > 1) creditors.push({ name: member, amount: amount });
       });
 
-      // 3. 貪婪演算法配對轉帳，最小化轉帳次數
       let transactions = [];
       let i = 0, j = 0;
 
@@ -386,11 +429,7 @@
         let creditor = creditors[j];
         
         let payment = Math.min(debtor.amount, creditor.amount);
-        transactions.push({
-          from: debtor.name,
-          to: creditor.name,
-          amount: payment
-        });
+        transactions.push({ from: debtor.name, to: creditor.name, amount: payment });
 
         debtor.amount -= payment;
         creditor.amount -= payment;
@@ -399,36 +438,5 @@
         if (creditor.amount <= 1) j++;
       }
 
-      // 4. 渲染結果
       if (transactions.length === 0) {
-        container.innerHTML = `<p class="text-emerald-600 font-medium text-sm">🎉 太棒了！目前大家都結清了，互不相欠！</p>`;
-        return;
-      }
-
-      container.innerHTML = transactions.map(t => `
-        <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 shadow-sm text-sm">
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-slate-800">${t.from}</span>
-            <span class="text-xs text-slate-400">應給</span>
-            <span class="font-bold text-indigo-600">${t.to}</span>
-          </div>
-          <span class="font-extrabold text-slate-900 text-base">NT$ ${t.amount.toLocaleString()}</span>
-        </div>
-      `).join('');
-    }
-
-    function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(trips, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `travel_expenses_${Date.now()}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    // 初始化
-    render();
-  </script>
-</body>
-</html>
+        container.innerHTML = `<p class="text-emerald-600 font-medium text-sm">🎉 太
