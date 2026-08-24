@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>旅遊分帳小幫手 (即時同步版)</title>
+  <title>旅遊分帳小幫手</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen pb-12">
@@ -27,14 +27,15 @@
       <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div>
-            <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">目前旅行 (雲端即時同步中)</span>
+            <span id="syncModeTag" class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">目前旅行</span>
             <h2 id="currentTripName" class="text-2xl font-bold text-slate-800">載入中...</h2>
           </div>
           <div class="flex flex-wrap gap-2">
             <button onclick="copyShareLink()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded transition flex items-center gap-1 cursor-pointer">
-              🔗 複製邀請連結 (傳給朋友一同編輯)
+              🔗 複製分享連結
             </button>
             <button onclick="exportData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition cursor-pointer">匯出 JSON</button>
+            <button onclick="deleteCurrentTrip()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded transition cursor-pointer">刪除此旅行</button>
           </div>
         </div>
 
@@ -118,12 +119,11 @@
     </div>
   </main>
 
-  <!-- 引入 Firebase SDK (Modular CDN) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // ▼▼▼ 請將這一段替換成你在 Firebase Console 複製的 firebaseConfig 物件 ▼▼▼
+    // 如欲使用跨裝置即時同步，請填入 Firebase Console 取得的配置資訊
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -132,193 +132,176 @@
       messagingSenderId: "123456789",
       appId: "YOUR_APP_ID"
     };
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+    let db = null;
 
-    const defaultTrip = {
-      name: '東京 5 天 4 夜自由行',
-      members: ['小明', '小美', '阿豪'],
-      expenses: [
-        { id: 'exp_1', name: '成田機場快線車票', amount: 3000, payer: '小明', beneficiaries: ['小明', '小美', '阿豪'] }
-      ]
-    };
+    if (isFirebaseConfigured) {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+    }
 
+    const defaultTrips = [
+      {
+        id: 'trip_default',
+        name: '東京 5 天 4 夜自由行',
+        members: ['小明', '小美', '阿豪'],
+        expenses: [
+          { id: 'exp_1', name: '成田機場快線車票', amount: 3000, payer: '小明', beneficiaries: ['小明', '小美', '阿豪'] }
+        ]
+      }
+    ];
+
+    let trips = [];
     let currentTripId = '';
-    let currentTripData = null;
-    let unsubscribe = null;
 
-    function initApp() {
+    function safeBtoa(str) {
+      return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => String.fromCharCode('0x' + p1)));
+    }
+
+    function safeAtob(str) {
+      return decodeURIComponent(Array.prototype.map.call(atob(str), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    }
+
+    function init() {
+      const tag = document.getElementById('syncModeTag');
+      if (isFirebaseConfigured) {
+        tag.innerText = "目前旅行 (Firebase 雲端同步中)";
+        initFirebase();
+      } else {
+        tag.innerText = "目前旅行 (本地儲存模式)";
+        initLocal();
+      }
+    }
+
+    // --- 本地模式 ---
+    function initLocal() {
+      const hash = window.location.hash;
+      if (hash.startsWith('#data=')) {
+        try {
+          const jsonStr = safeAtob(hash.replace('#data=', ''));
+          const sharedTrip = JSON.parse(jsonStr);
+          trips = JSON.parse(localStorage.getItem('travel_split_trips')) || defaultTrips;
+          const idx = trips.findIndex(t => t.id === sharedTrip.id);
+          if (idx !== -1) trips[idx] = sharedTrip;
+          else trips.unshift(sharedTrip);
+          currentTripId = sharedTrip.id;
+          saveLocal();
+        } catch (e) {
+          window.history.replaceState(null, '', window.location.pathname);
+          loadLocal();
+        }
+      } else {
+        loadLocal();
+      }
+      render();
+    }
+
+    function loadLocal() {
+      trips = JSON.parse(localStorage.getItem('travel_split_trips')) || defaultTrips;
+      currentTripId = trips[0]?.id || 'trip_default';
+    }
+
+    function saveLocal() {
+      localStorage.setItem('travel_split_trips', JSON.stringify(trips));
+      const trip = getCurrentTrip();
+      if (trip) {
+        try {
+          window.history.replaceState(null, '', `#data=${safeBtoa(JSON.stringify(trip))}`);
+        } catch(e) {}
+      }
+    }
+
+    function getCurrentTrip() {
+      return trips.find(t => t.id === currentTripId) || trips[0];
+    }
+
+    // --- Firebase 雲端模式 ---
+    function initFirebase() {
       const urlParams = new URLSearchParams(window.location.search);
-      currentTripId = urlParams.get('trip');
-
-      if (!currentTripId) {
-        currentTripId = 'trip_' + Date.now();
+      currentTripId = urlParams.get('trip') || 'trip_' + Date.now();
+      if (!urlParams.get('trip')) {
         window.history.replaceState(null, '', `?trip=${currentTripId}`);
       }
-
-      listenToTripData(currentTripId);
-    }
-
-    function listenToTripData(tripId) {
-      if (unsubscribe) unsubscribe();
-
-      // 開啟 Firestore 即時監聽，資料異動時自動更新畫面
-      unsubscribe = onSnapshot(doc(db, "trips", tripId), (docSnap) => {
+      onSnapshot(doc(db, "trips", currentTripId), (docSnap) => {
         if (docSnap.exists()) {
-          currentTripData = docSnap.data();
+          trips = [docSnap.data()];
         } else {
-          currentTripData = defaultTrip;
-          saveDataToCloud();
+          trips = [{ id: currentTripId, name: '新旅行', members: ['成員A', '成員B'], expenses: [] }];
+          saveFirebase();
         }
         render();
-      }, (error) => {
-        console.error("Firestore 同步失敗：", error);
       });
     }
 
-    async function saveDataToCloud() {
-      if (!currentTripId || !currentTripData) return;
-      try {
-        await setDoc(doc(db, "trips", currentTripId), currentTripData);
-      } catch (e) {
-        console.error("寫入雲端失敗：", e);
-      }
+    function saveFirebase() {
+      const trip = getCurrentTrip();
+      if (trip) setDoc(doc(db, "trips", currentTripId), trip);
     }
 
-    window.copyShareLink = function() {
-      navigator.clipboard.writeText(window.location.href).then(() => {
-        alert('🎉 專屬同步連結已複製！傳給朋友開啟即可「即時共同編輯」此行程。');
-      }).catch(() => {
-        alert('複製失敗，請直接手動複製網址列的完整網址。');
-      });
-    };
+    function saveData() {
+      if (isFirebaseConfigured) saveFirebase();
+      else saveLocal();
+    }
 
-    window.createNewTrip = function() {
-      const name = prompt('請輸入新旅行的名稱：', '新旅行');
-      if (!name) return;
-
-      const newTripId = 'trip_' + Date.now();
-      const newTripData = {
-        name: name,
-        members: ['成員A', '成員B'],
-        expenses: []
-      };
-
-      setDoc(doc(db, "trips", newTripId), newTripData).then(() => {
-        window.location.search = `?trip=${newTripId}`;
-      });
-    };
-
+    // --- UI 渲染邏輯 ---
     function render() {
-      if (!currentTripData) return;
+      const trip = getCurrentTrip();
+      if (!trip) return;
 
-      document.getElementById('currentTripName').innerText = currentTripData.name;
+      document.getElementById('currentTripName').innerText = trip.name;
+      renderTabs();
       renderTripDetails();
       renderExpenseTable();
       renderSettlement();
     }
 
+    function renderTabs() {
+      const tabs = document.getElementById('tripTabs');
+      if (isFirebaseConfigured) {
+        tabs.style.display = 'none';
+        return;
+      }
+      tabs.innerHTML = trips.map(t => `
+        <button onclick="switchTrip('${t.id}')" class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer ${t.id === currentTripId ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-600 hover:bg-slate-100'}">
+          ${t.name}
+        </button>
+      `).join('');
+    }
+
     function renderTripDetails() {
+      const trip = getCurrentTrip();
       const memberContainer = document.getElementById('memberTags');
-      memberContainer.innerHTML = currentTripData.members.map(m => `
+      memberContainer.innerHTML = trip.members.map(m => `
         <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-full border border-slate-200">
           ${m}
           <button onclick="removeMember('${m}')" class="text-slate-400 hover:text-rose-500 font-bold ml-1 cursor-pointer">&times;</button>
         </span>
       `).join('');
 
-      const payerSelect = document.getElementById('payerSelect');
-      payerSelect.innerHTML = currentTripData.members.map(m => `<option value="${m}">${m}</option>`).join('');
+      document.getElementById('payerSelect').innerHTML = trip.members.map(m => `<option value="${m}">${m}</option>`).join('');
 
-      const beneContainer = document.getElementById('beneficiariesCheckboxes');
-      beneContainer.innerHTML = currentTripData.members.map(m => `
+      document.getElementById('beneficiariesCheckboxes').innerHTML = trip.members.map(m => `
         <label class="inline-flex items-center gap-1.5 text-sm font-medium cursor-pointer">
           <input type="checkbox" name="beneficiary" value="${m}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
           ${m}
         </label>
       `).join('');
 
-      const total = currentTripData.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const total = trip.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
       document.getElementById('totalExpense').innerText = `NT$ ${total.toLocaleString()}`;
-      
-      const perPerson = currentTripData.members.length ? Math.round(total / currentTripData.members.length) : 0;
-      document.getElementById('perPersonExpense').innerText = `NT$ ${perPerson.toLocaleString()}`;
+      document.getElementById('perPersonExpense').innerText = `NT$ ${trip.members.length ? Math.round(total / trip.members.length).toLocaleString() : 0}`;
     }
 
-    window.addMember = function() {
-      const input = document.getElementById('newMemberName');
-      const name = input.value.trim();
-
-      if (!name) return;
-      if (currentTripData.members.includes(name)) {
-        alert('該名字已經存在！');
-        return;
-      }
-
-      currentTripData.members.push(name);
-      input.value = '';
-      saveDataToCloud();
-    };
-
-    window.removeMember = function(name) {
-      const hasExpense = currentTripData.expenses.some(e => e.payer === name || e.beneficiaries.includes(name));
-      if (hasExpense) {
-        if (!confirm(`成員「${name}」已有相關的花費紀錄，刪除可能導致結算不準確。確定刪除？`)) return;
-      }
-      currentTripData.members = currentTripData.members.filter(m => m !== name);
-      saveDataToCloud();
-    };
-
-    window.toggleSelectAllBeneficiaries = function() {
-      const checkboxes = document.querySelectorAll('input[name="beneficiary"]');
-      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-      checkboxes.forEach(cb => cb.checked = !allChecked);
-    };
-
-    window.handleExpenseSubmit = function(e) {
-      e.preventDefault();
-      const name = document.getElementById('itemName').value;
-      const amount = Number(document.getElementById('itemAmount').value);
-      const payer = document.getElementById('payerSelect').value;
-      
-      const checkedBoxes = document.querySelectorAll('input[name="beneficiary"]:checked');
-      const beneficiaries = Array.from(checkedBoxes).map(cb => cb.value);
-
-      if (beneficiaries.length === 0) {
-        alert('請至少勾選一個幫忙墊付的人！');
-        return;
-      }
-
-      currentTripData.expenses.push({
-        id: 'exp_' + Date.now(),
-        name,
-        amount,
-        payer,
-        beneficiaries
-      });
-
-      document.getElementById('itemName').value = '';
-      document.getElementById('itemAmount').value = '';
-      
-      saveDataToCloud();
-    };
-
-    window.deleteExpense = function(expId) {
-      currentTripData.expenses = currentTripData.expenses.filter(e => e.id !== expId);
-      saveDataToCloud();
-    };
-
     function renderExpenseTable() {
+      const trip = getCurrentTrip();
       const tbody = document.getElementById('expenseTableBody');
-
-      if (currentTripData.expenses.length === 0) {
+      if (!trip.expenses || trip.expenses.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">目前尚無消費紀錄</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = currentTripData.expenses.map(exp => `
+      tbody.innerHTML = trip.expenses.map(exp => `
         <tr class="hover:bg-slate-50 transition">
           <td class="py-3 px-3 font-medium text-slate-800">${exp.name}</td>
           <td class="py-3 px-3 font-bold text-indigo-600">NT$ ${exp.amount.toLocaleString()}</td>
@@ -332,56 +315,46 @@
     }
 
     function renderSettlement() {
+      const trip = getCurrentTrip();
       const container = document.getElementById('settlementResult');
-      
-      if (currentTripData.members.length === 0) {
+      if (!trip.members || trip.members.length === 0) {
         container.innerHTML = `<p class="text-slate-400 text-sm">請先建立成員。</p>`;
         return;
       }
 
       const balances = {};
-      currentTripData.members.forEach(m => balances[m] = 0);
+      trip.members.forEach(m => balances[m] = 0);
 
-      currentTripData.expenses.forEach(exp => {
-        const splitAmount = exp.amount / exp.beneficiaries.length;
+      trip.expenses.forEach(exp => {
+        const split = exp.amount / exp.beneficiaries.length;
         balances[exp.payer] = (balances[exp.payer] || 0) + exp.amount;
-        exp.beneficiaries.forEach(b => {
-          balances[b] = (balances[b] || 0) - splitAmount;
-        });
+        exp.beneficiaries.forEach(b => balances[b] = (balances[b] || 0) - split);
       });
 
-      let debtors = [];
-      let creditors = [];
-
-      Object.keys(balances).forEach(member => {
-        const amount = Math.round(balances[member]);
-        if (amount < -1) debtors.push({ name: member, amount: -amount });
-        else if (amount > 1) creditors.push({ name: member, amount: amount });
+      let debtors = [], creditors = [];
+      Object.keys(balances).forEach(m => {
+        const amt = Math.round(balances[m]);
+        if (amt < -1) debtors.push({ name: m, amount: -amt });
+        else if (amt > 1) creditors.push({ name: m, amount: amt });
       });
 
-      let transactions = [];
+      let tx = [];
       let i = 0, j = 0;
-
       while (i < debtors.length && j < creditors.length) {
-        let debtor = debtors[i];
-        let creditor = creditors[j];
-        
-        let payment = Math.min(debtor.amount, creditor.amount);
-        transactions.push({ from: debtor.name, to: creditor.name, amount: payment });
-
-        debtor.amount -= payment;
-        creditor.amount -= payment;
-
-        if (debtor.amount <= 1) i++;
-        if (creditor.amount <= 1) j++;
+        let payment = Math.min(debtors[i].amount, creditors[j].amount);
+        tx.push({ from: debtors[i].name, to: creditors[j].name, amount: payment });
+        debtors[i].amount -= payment;
+        creditors[j].amount -= payment;
+        if (debtors[i].amount <= 1) i++;
+        if (creditors[j].amount <= 1) j++;
       }
 
-      if (transactions.length === 0) {
+      if (tx.length === 0) {
         container.innerHTML = `<p class="text-emerald-600 font-medium text-sm">🎉 太棒了！目前大家都結清了，互不相欠！</p>`;
         return;
       }
 
-      container.innerHTML = transactions.map(t => `
+      container.innerHTML = tx.map(t => `
         <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 shadow-sm text-sm">
           <div class="flex items-center gap-2">
             <span class="font-bold text-slate-800">${t.from}</span>
@@ -393,18 +366,97 @@
       `).join('');
     }
 
-    window.exportData = function() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentTripData, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `travel_expenses_${Date.now()}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+    // 全域事件榜定
+    window.switchTrip = (id) => { currentTripId = id; render(); };
+    window.createNewTrip = () => {
+      const name = prompt('請輸入新旅行的名稱：', '新旅行');
+      if (!name) return;
+      if (isFirebaseConfigured) {
+        window.location.search = `?trip=trip_${Date.now()}`;
+      } else {
+        const newTrip = { id: 'trip_' + Date.now(), name, members: ['成員A', '成員B'], expenses: [] };
+        trips.unshift(newTrip);
+        currentTripId = newTrip.id;
+        saveData();
+        render();
+      }
+    };
+    window.deleteCurrentTrip = () => {
+      if (!isFirebaseConfigured && trips.length <= 1) {
+        alert('請至少保留一個旅行記錄！');
+        return;
+      }
+      if (confirm(`確定要刪除「${getCurrentTrip().name}」嗎？`)) {
+        if (!isFirebaseConfigured) {
+          trips = trips.filter(t => t.id !== currentTripId);
+          currentTripId = trips[0].id;
+          saveData();
+          render();
+        } else {
+          alert('雲端模式請直接建立新旅行即可。');
+        }
+      }
+    };
+    window.addMember = () => {
+      const input = document.getElementById('newMemberName');
+      const name = input.value.trim();
+      const trip = getCurrentTrip();
+      if (!name || trip.members.includes(name)) return;
+      trip.members.push(name);
+      input.value = '';
+      saveData();
+      render();
+    };
+    window.removeMember = (name) => {
+      const trip = getCurrentTrip();
+      trip.members = trip.members.filter(m => m !== name);
+      saveData();
+      render();
+    };
+    window.toggleSelectAllBeneficiaries = () => {
+      const cbs = document.querySelectorAll('input[name="beneficiary"]');
+      const all = Array.from(cbs).every(cb => cb.checked);
+      cbs.forEach(cb => cb.checked = !all);
+    };
+    window.handleExpenseSubmit = (e) => {
+      e.preventDefault();
+      const trip = getCurrentTrip();
+      const name = document.getElementById('itemName').value;
+      const amount = Number(document.getElementById('itemAmount').value);
+      const payer = document.getElementById('payerSelect').value;
+      const beneficiaries = Array.from(document.querySelectorAll('input[name="beneficiary"]:checked')).map(cb => cb.value);
+      if (beneficiaries.length === 0) {
+        alert('請至少勾選一個分攤人！');
+        return;
+      }
+      trip.expenses.push({ id: 'exp_' + Date.now(), name, amount, payer, beneficiaries });
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemAmount').value = '';
+      saveData();
+      render();
+    };
+    window.deleteExpense = (expId) => {
+      const trip = getCurrentTrip();
+      trip.expenses = trip.expenses.filter(e => e.id !== expId);
+      saveData();
+      render();
+    };
+    window.copyShareLink = () => {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('🎉 分享連結已複製！傳給朋友即可查看。');
+      });
+    };
+    window.exportData = () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(getCurrentTrip(), null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `travel_expenses_${Date.now()}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     };
 
-    // 啟動應用程式
-    initApp();
+    init();
   </script>
 </body>
 </html>
