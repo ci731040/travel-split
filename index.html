@@ -3,13 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>旅遊分帳小幫手</title>
-  <!-- 載入 Tailwind CSS CDN -->
+  <title>旅遊分帳小幫手 (即時同步版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen pb-12">
 
-  <!-- 頂部導航與標題 -->
   <header class="bg-indigo-600 text-white shadow-md">
     <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
       <h1 class="text-xl font-bold flex items-center gap-2">
@@ -22,36 +20,27 @@
   </header>
 
   <main class="max-w-4xl mx-auto px-4 mt-6">
-    <!-- 旅行切換標籤頁 (Tabs) -->
-    <div id="tripTabs" class="flex gap-2 overflow-x-auto pb-2 border-b border-slate-200 mb-6">
-      <!-- 動態產生分頁 -->
-    </div>
+    <div id="tripTabs" class="flex gap-2 overflow-x-auto pb-2 border-b border-slate-200 mb-6"></div>
 
-    <!-- 主要內容區 -->
     <div id="appContent" class="space-y-6">
       
-      <!-- 旅行基本設定區 -->
       <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div>
-            <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">目前旅行</span>
-            <h2 id="currentTripName" class="text-2xl font-bold text-slate-800"></h2>
+            <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">目前旅行 (雲端即時同步中)</span>
+            <h2 id="currentTripName" class="text-2xl font-bold text-slate-800">載入中...</h2>
           </div>
           <div class="flex flex-wrap gap-2">
             <button onclick="copyShareLink()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded transition flex items-center gap-1 cursor-pointer">
-              🔗 複製分享連結
+              🔗 複製邀請連結 (傳給朋友一同編輯)
             </button>
             <button onclick="exportData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded transition cursor-pointer">匯出 JSON</button>
-            <button onclick="deleteCurrentTrip()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded transition cursor-pointer">刪除此旅行</button>
           </div>
         </div>
 
-        <!-- 成員管理 -->
         <div class="border-t pt-4">
           <label class="block text-sm font-medium text-slate-600 mb-2">同行成員（名單）：</label>
-          <div id="memberTags" class="flex flex-wrap gap-2 mb-3">
-            <!-- 動態顯示成員 -->
-          </div>
+          <div id="memberTags" class="flex flex-wrap gap-2 mb-3"></div>
           <div class="flex gap-2 max-w-sm">
             <input type="text" id="newMemberName" placeholder="輸入成員名稱" class="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <button onclick="addMember()" class="bg-slate-800 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-slate-700 transition cursor-pointer">新增成員</button>
@@ -59,7 +48,6 @@
         </div>
       </section>
 
-      <!-- 統計圖卡 -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
           <p class="text-xs text-slate-500">總支出金額</p>
@@ -71,11 +59,8 @@
         </div>
       </div>
 
-      <!-- 新增墊付消費項目 -->
       <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
-        <h3 class="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">
-          📝 記一筆款項
-        </h3>
+        <h3 class="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">📝 記一筆款項</h3>
         <form id="expenseForm" onsubmit="handleExpenseSubmit(event)" class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -88,9 +73,7 @@
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">先墊付者</label>
-              <select id="payerSelect" required class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                <!-- 動態載入成員選項 -->
-              </select>
+              <select id="payerSelect" required class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></select>
             </div>
           </div>
 
@@ -99,9 +82,7 @@
               <label class="block text-xs font-medium text-slate-600">幫哪些人墊付（分攤人）</label>
               <button type="button" onclick="toggleSelectAllBeneficiaries()" class="text-xs text-indigo-600 hover:underline cursor-pointer">全選 / 全不選</button>
             </div>
-            <div id="beneficiariesCheckboxes" class="flex flex-wrap gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-              <!-- 動態載入成員多選框 -->
-            </div>
+            <div id="beneficiariesCheckboxes" class="flex flex-wrap gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200"></div>
           </div>
 
           <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition text-sm cursor-pointer">
@@ -110,7 +91,6 @@
         </form>
       </section>
 
-      <!-- 消費明細列表 -->
       <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
         <h3 class="font-bold text-lg mb-4 text-slate-800">📋 花費明細</h3>
         <div class="overflow-x-auto">
@@ -124,187 +104,125 @@
                 <th class="py-3 px-3 text-right">操作</th>
               </tr>
             </thead>
-            <tbody id="expenseTableBody" class="divide-y divide-slate-100">
-              <!-- 動態載入費用資料 -->
-            </tbody>
+            <tbody id="expenseTableBody" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
       </section>
 
-      <!-- 最終結算區 -->
       <section class="bg-gradient-to-br from-indigo-50 to-slate-50 p-5 rounded-xl border border-indigo-100 shadow-sm">
-        <h3 class="font-bold text-lg mb-2 text-indigo-950 flex items-center gap-2">
-          💡 最終結算方案（最佳化轉帳）
-        </h3>
+        <h3 class="font-bold text-lg mb-2 text-indigo-950 flex items-center gap-2">💡 最終結算方案（最佳化轉帳）</h3>
         <p class="text-xs text-slate-500 mb-4">系統已自動計算淨額，並透過演算法簡化轉帳流程以減少次數。</p>
-        
-        <div id="settlementResult" class="space-y-2">
-          <!-- 動態載入結算結果 -->
-        </div>
+        <div id="settlementResult" class="space-y-2"></div>
       </section>
 
     </div>
   </main>
 
-  <script>
-    // 支援包含中文字元的 UTF-8 安全 Base64 編解碼
-    function safeBtoa(str) {
-      return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-        return String.fromCharCode('0x' + p1);
-      }));
-    }
+  <!-- 引入 Firebase SDK (Modular CDN) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    function safeAtob(str) {
-      return decodeURIComponent(Array.prototype.map.call(atob(str), function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-    }
+    // ▼▼▼ 請將這一段替換成你在 Firebase Console 複製的 firebaseConfig 物件 ▼▼▼
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "YOUR_APP_ID"
+    };
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-    const defaultTrips = [
-      {
-        id: 'trip_default',
-        name: '東京 5 天 4 夜自由行',
-        members: ['小明', '小美', '阿豪'],
-        expenses: [
-          { id: 'exp_1', name: '成田機場快線車票', amount: 3000, payer: '小明', beneficiaries: ['小明', '小美', '阿豪'] },
-          { id: 'exp_2', name: '居酒屋晚餐', amount: 4500, payer: '小美', beneficiaries: ['小明', '小美', '阿豪'] }
-        ]
-      }
-    ];
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    let trips = [];
+    const defaultTrip = {
+      name: '東京 5 天 4 夜自由行',
+      members: ['小明', '小美', '阿豪'],
+      expenses: [
+        { id: 'exp_1', name: '成田機場快線車票', amount: 3000, payer: '小明', beneficiaries: ['小明', '小美', '阿豪'] }
+      ]
+    };
+
     let currentTripId = '';
+    let currentTripData = null;
+    let unsubscribe = null;
 
-    function initData() {
-      const hash = window.location.hash;
-      
-      if (hash.startsWith('#data=')) {
-        try {
-          const rawData = hash.replace('#data=', '');
-          if (!rawData) throw new Error("Hash 資料為空");
+    function initApp() {
+      const urlParams = new URLSearchParams(window.location.search);
+      currentTripId = urlParams.get('trip');
 
-          const jsonStr = safeAtob(rawData);
-          const sharedTrip = JSON.parse(jsonStr);
-          
-          let localTrips = JSON.parse(localStorage.getItem('travel_split_trips')) || defaultTrips;
-          
-          const index = localTrips.findIndex(t => t.id === sharedTrip.id);
-          if (index !== -1) {
-            localTrips[index] = sharedTrip;
-          } else {
-            localTrips.unshift(sharedTrip);
-          }
-          
-          trips = localTrips;
-          currentTripId = sharedTrip.id;
-          saveToLocalStorage();
-        } catch (e) {
-          console.error('網址資料解析失敗，已自動重置 Hash：', e);
-          window.history.replaceState(null, '', window.location.pathname);
-          loadFromLocal();
-        }
-      } else {
-        loadFromLocal();
+      if (!currentTripId) {
+        currentTripId = 'trip_' + Date.now();
+        window.history.replaceState(null, '', `?trip=${currentTripId}`);
       }
+
+      listenToTripData(currentTripId);
     }
 
-    function loadFromLocal() {
-      trips = JSON.parse(localStorage.getItem('travel_split_trips')) || defaultTrips;
-      currentTripId = trips[0]?.id || 'trip_default';
-    }
+    function listenToTripData(tripId) {
+      if (unsubscribe) unsubscribe();
 
-    function saveToLocalStorage() {
-      localStorage.setItem('travel_split_trips', JSON.stringify(trips));
-      updateUrlHash();
-    }
-
-    function updateUrlHash() {
-      const currentTrip = getCurrentTrip();
-      if (currentTrip) {
-        try {
-          const jsonStr = JSON.stringify(currentTrip);
-          const encoded = safeBtoa(jsonStr);
-          window.history.replaceState(null, '', `#data=${encoded}`);
-        } catch(e) {
-          console.error('更新 Hash 失敗', e);
+      // 開啟 Firestore 即時監聽，資料異動時自動更新畫面
+      unsubscribe = onSnapshot(doc(db, "trips", tripId), (docSnap) => {
+        if (docSnap.exists()) {
+          currentTripData = docSnap.data();
+        } else {
+          currentTripData = defaultTrip;
+          saveDataToCloud();
         }
-      }
-    }
-
-    function getCurrentTrip() {
-      return trips.find(t => t.id === currentTripId) || trips[0];
-    }
-
-    function copyShareLink() {
-      updateUrlHash();
-      navigator.clipboard.writeText(window.location.href).then(() => {
-        alert('🎉 分享連結已複製到剪貼簿！傳給朋友開啟即可載入此行程資料。');
-      }).catch(() => {
-        alert('複製失敗，請直接手動複製網址列的完整網址。');
+        render();
+      }, (error) => {
+        console.error("Firestore 同步失敗：", error);
       });
     }
 
-    function render() {
-      const currentTrip = getCurrentTrip();
-      if (!currentTrip) return;
-
-      currentTripId = currentTrip.id;
-
-      renderTabs();
-      renderTripDetails();
-      renderExpenseTable();
-      renderSettlement();
-      updateUrlHash();
+    async function saveDataToCloud() {
+      if (!currentTripId || !currentTripData) return;
+      try {
+        await setDoc(doc(db, "trips", currentTripId), currentTripData);
+      } catch (e) {
+        console.error("寫入雲端失敗：", e);
+      }
     }
 
-    function renderTabs() {
-      const tabsContainer = document.getElementById('tripTabs');
-      tabsContainer.innerHTML = trips.map(trip => `
-        <button onclick="switchTrip('${trip.id}')" class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition cursor-pointer ${trip.id === currentTripId ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-600 hover:bg-slate-100'}">
-          ${trip.name}
-        </button>
-      `).join('');
-    }
+    window.copyShareLink = function() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('🎉 專屬同步連結已複製！傳給朋友開啟即可「即時共同編輯」此行程。');
+      }).catch(() => {
+        alert('複製失敗，請直接手動複製網址列的完整網址。');
+      });
+    };
 
-    function switchTrip(id) {
-      currentTripId = id;
-      render();
-    }
-
-    function createNewTrip() {
+    window.createNewTrip = function() {
       const name = prompt('請輸入新旅行的名稱：', '新旅行');
       if (!name) return;
-      const newTrip = {
-        id: 'trip_' + Date.now(),
+
+      const newTripId = 'trip_' + Date.now();
+      const newTripData = {
         name: name,
         members: ['成員A', '成員B'],
         expenses: []
       };
-      trips.unshift(newTrip);
-      currentTripId = newTrip.id;
-      saveToLocalStorage();
-      render();
-    }
 
-    function deleteCurrentTrip() {
-      if (trips.length <= 1) {
-        alert('請至少保留一個旅行記錄！');
-        return;
-      }
-      if (confirm(`確定要刪除「${getCurrentTrip().name}」嗎？`)) {
-        trips = trips.filter(t => t.id !== currentTripId);
-        currentTripId = trips[0].id;
-        saveToLocalStorage();
-        render();
-      }
+      setDoc(doc(db, "trips", newTripId), newTripData).then(() => {
+        window.location.search = `?trip=${newTripId}`;
+      });
+    };
+
+    function render() {
+      if (!currentTripData) return;
+
+      document.getElementById('currentTripName').innerText = currentTripData.name;
+      renderTripDetails();
+      renderExpenseTable();
+      renderSettlement();
     }
 
     function renderTripDetails() {
-      const trip = getCurrentTrip();
-      document.getElementById('currentTripName').innerText = trip.name;
-
       const memberContainer = document.getElementById('memberTags');
-      memberContainer.innerHTML = trip.members.map(m => `
+      memberContainer.innerHTML = currentTripData.members.map(m => `
         <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-full border border-slate-200">
           ${m}
           <button onclick="removeMember('${m}')" class="text-slate-400 hover:text-rose-500 font-bold ml-1 cursor-pointer">&times;</button>
@@ -312,60 +230,55 @@
       `).join('');
 
       const payerSelect = document.getElementById('payerSelect');
-      payerSelect.innerHTML = trip.members.map(m => `<option value="${m}">${m}</option>`).join('');
+      payerSelect.innerHTML = currentTripData.members.map(m => `<option value="${m}">${m}</option>`).join('');
 
       const beneContainer = document.getElementById('beneficiariesCheckboxes');
-      beneContainer.innerHTML = trip.members.map(m => `
+      beneContainer.innerHTML = currentTripData.members.map(m => `
         <label class="inline-flex items-center gap-1.5 text-sm font-medium cursor-pointer">
           <input type="checkbox" name="beneficiary" value="${m}" checked class="rounded text-indigo-600 focus:ring-indigo-500">
           ${m}
         </label>
       `).join('');
 
-      const total = trip.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const total = currentTripData.expenses.reduce((sum, e) => sum + Number(e.amount), 0);
       document.getElementById('totalExpense').innerText = `NT$ ${total.toLocaleString()}`;
       
-      const perPerson = trip.members.length ? Math.round(total / trip.members.length) : 0;
+      const perPerson = currentTripData.members.length ? Math.round(total / currentTripData.members.length) : 0;
       document.getElementById('perPersonExpense').innerText = `NT$ ${perPerson.toLocaleString()}`;
     }
 
-    function addMember() {
+    window.addMember = function() {
       const input = document.getElementById('newMemberName');
       const name = input.value.trim();
-      const trip = getCurrentTrip();
 
       if (!name) return;
-      if (trip.members.includes(name)) {
+      if (currentTripData.members.includes(name)) {
         alert('該名字已經存在！');
         return;
       }
 
-      trip.members.push(name);
+      currentTripData.members.push(name);
       input.value = '';
-      saveToLocalStorage();
-      render();
-    }
+      saveDataToCloud();
+    };
 
-    function removeMember(name) {
-      const trip = getCurrentTrip();
-      const hasExpense = trip.expenses.some(e => e.payer === name || e.beneficiaries.includes(name));
+    window.removeMember = function(name) {
+      const hasExpense = currentTripData.expenses.some(e => e.payer === name || e.beneficiaries.includes(name));
       if (hasExpense) {
         if (!confirm(`成員「${name}」已有相關的花費紀錄，刪除可能導致結算不準確。確定刪除？`)) return;
       }
-      trip.members = trip.members.filter(m => m !== name);
-      saveToLocalStorage();
-      render();
-    }
+      currentTripData.members = currentTripData.members.filter(m => m !== name);
+      saveDataToCloud();
+    };
 
-    function toggleSelectAllBeneficiaries() {
+    window.toggleSelectAllBeneficiaries = function() {
       const checkboxes = document.querySelectorAll('input[name="beneficiary"]');
       const allChecked = Array.from(checkboxes).every(cb => cb.checked);
       checkboxes.forEach(cb => cb.checked = !allChecked);
-    }
+    };
 
-    function handleExpenseSubmit(e) {
+    window.handleExpenseSubmit = function(e) {
       e.preventDefault();
-      const trip = getCurrentTrip();
       const name = document.getElementById('itemName').value;
       const amount = Number(document.getElementById('itemAmount').value);
       const payer = document.getElementById('payerSelect').value;
@@ -378,7 +291,7 @@
         return;
       }
 
-      trip.expenses.push({
+      currentTripData.expenses.push({
         id: 'exp_' + Date.now(),
         name,
         amount,
@@ -389,27 +302,23 @@
       document.getElementById('itemName').value = '';
       document.getElementById('itemAmount').value = '';
       
-      saveToLocalStorage();
-      render();
-    }
+      saveDataToCloud();
+    };
 
-    function deleteExpense(expId) {
-      const trip = getCurrentTrip();
-      trip.expenses = trip.expenses.filter(e => e.id !== expId);
-      saveToLocalStorage();
-      render();
-    }
+    window.deleteExpense = function(expId) {
+      currentTripData.expenses = currentTripData.expenses.filter(e => e.id !== expId);
+      saveDataToCloud();
+    };
 
     function renderExpenseTable() {
-      const trip = getCurrentTrip();
       const tbody = document.getElementById('expenseTableBody');
 
-      if (trip.expenses.length === 0) {
+      if (currentTripData.expenses.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">目前尚無消費紀錄</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = trip.expenses.map(exp => `
+      tbody.innerHTML = currentTripData.expenses.map(exp => `
         <tr class="hover:bg-slate-50 transition">
           <td class="py-3 px-3 font-medium text-slate-800">${exp.name}</td>
           <td class="py-3 px-3 font-bold text-indigo-600">NT$ ${exp.amount.toLocaleString()}</td>
@@ -423,18 +332,17 @@
     }
 
     function renderSettlement() {
-      const trip = getCurrentTrip();
       const container = document.getElementById('settlementResult');
       
-      if (trip.members.length === 0) {
+      if (currentTripData.members.length === 0) {
         container.innerHTML = `<p class="text-slate-400 text-sm">請先建立成員。</p>`;
         return;
       }
 
       const balances = {};
-      trip.members.forEach(m => balances[m] = 0);
+      currentTripData.members.forEach(m => balances[m] = 0);
 
-      trip.expenses.forEach(exp => {
+      currentTripData.expenses.forEach(exp => {
         const splitAmount = exp.amount / exp.beneficiaries.length;
         balances[exp.payer] = (balances[exp.payer] || 0) + exp.amount;
         exp.beneficiaries.forEach(b => {
@@ -485,19 +393,18 @@
       `).join('');
     }
 
-    function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(trips, null, 2));
+    window.exportData = function() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentTripData, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", `travel_expenses_${Date.now()}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-    }
+    };
 
     // 啟動應用程式
-    initData();
-    render();
+    initApp();
   </script>
 </body>
 </html>
