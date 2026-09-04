@@ -176,7 +176,6 @@
 
     function init() {
       const tag = document.getElementById('syncModeTag');
-      // 預設日期帶入今日
       document.getElementById('itemDate').value = todayStr;
 
       bindEvents();
@@ -339,7 +338,6 @@
         return;
       }
 
-      // 按日期升序排序
       const sortedExpenses = [...trip.expenses].sort((a, b) => new Date(a.date || '1970-01-01') - new Date(b.date || '1970-01-01'));
 
       tbody.innerHTML = sortedExpenses.map(exp => `
@@ -415,16 +413,23 @@
     // --- 事件處理函式 ---
     function removeMember(name) {
       const trip = getCurrentTrip();
-      trip.members = trip.members.filter(m => m !== name);
-      saveData();
-      render();
+      if (confirm(`確定要將成員「${name}」移除嗎？`)) {
+        trip.members = trip.members.filter(m => m !== name);
+        saveData();
+        render();
+      }
     }
 
     function deleteExpense(expId) {
       const trip = getCurrentTrip();
-      trip.expenses = trip.expenses.filter(e => e.id !== expId);
-      saveData();
-      render();
+      const exp = trip.expenses.find(e => e.id === expId);
+      const itemName = exp ? `「${exp.name}」` : '這筆消費';
+      
+      if (confirm(`確定要刪除 ${itemName} 嗎？`)) {
+        trip.expenses = trip.expenses.filter(e => e.id !== expId);
+        saveData();
+        render();
+      }
     }
 
     function bindEvents() {
